@@ -57,8 +57,11 @@ class H36M_Updater(chainer.training.StandardUpdater):
 
         xy_real = Variable(xy_proj)
         z_pred = gen(xy_real)
-        z_mse = F.mean_squared_error(z_pred, xyz[:, 2::3])
-
+        #z_mse = F.mean_squared_error(z_pred, xyz[:, 2::3])
+        z = z_pred * scale
+        z_real = xyz[:, 2::3] * scale
+        z_mse = F.mean_squared_error(z, z_real)
+        
         if self.mode == 'supervised':
             gen.cleargrads()
             z_mse.backward()

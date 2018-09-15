@@ -37,7 +37,11 @@ class Evaluator(extensions.Evaluator):
                         chainer.using_config('train', False):
                     xy_real = chainer.Variable(xy_proj)
                     z_pred = gen(xy_real)
-                    z_mse = F.mean_squared_error(z_pred, xyz[:, 2::3])
+                    #z_mse = F.mean_squared_error(z_pred, xyz[:, 2::3])
+                    z = z_pred * scale
+                    z_real = xyz[:, 2::3] * scale
+                    z_mse = F.mean_squared_error(z, z_real)
+
                     chainer.report({'z_mse': z_mse}, gen)
 
                     lx = gen.xp.power(xyz[:, 0::3] - xy_proj[:, 0::2], 2)
