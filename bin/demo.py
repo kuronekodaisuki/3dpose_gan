@@ -182,8 +182,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('input', help='Path to image or video. Skip to capture frames from camera')
-    parser.add_argument('--proto2d', help='Path to .prototxt', required=True)
-    parser.add_argument('--model2d', help='Path to .caffemodel', required=True)
+    parser.add_argument('--proto2d', help='Path to .prototxt', default='/data/openpose_pose_coco.prototxt')
+    parser.add_argument('--model2d', help='Path to .caffemodel', default='/data/pose_iter_440000.caffemodel')
     parser.add_argument('--thr', default=0.1, type=float, help='Threshold value for pose parts heat map')
     parser.add_argument('--width', default=368, type=int, help='Resize input to specific width.')
     parser.add_argument('--height', default=368, type=int, help='Resize input to specific height.')
