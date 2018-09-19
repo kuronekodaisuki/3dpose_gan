@@ -156,9 +156,11 @@ def main(args):
     model = evaluation_util.load_model(vars(args))
     chainer.serializers.load_npz(args.lift_model, model)
     cap = cv.VideoCapture(args.input if args.input else 0)
-
+    print(cap)
+    
     hasFrame, frame = cap.read()
     if not hasFrame:
+        print("exit", frame, hasFrame)
         exit(0)
     points = OpenPose(args).predict(args, frame)
     points = [vec for vec in points]

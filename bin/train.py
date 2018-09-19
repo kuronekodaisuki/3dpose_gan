@@ -80,9 +80,9 @@ def main():
 
     # Setup an optimizer
     def make_optimizer(model):
-        optimizer = chainer.optimizers.Adam(alpha=2e-4, beta1=0.5)
+        optimizer = chainer.optimizers.Adam(alpha=3e-4, beta1=0.5)
         optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(1e-5))
+        optimizer.add_hook(chainer.optimizer.WeightDecay(0.000002))
         return optimizer
 
     opt_gen = make_optimizer(gen)
