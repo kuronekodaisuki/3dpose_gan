@@ -49,18 +49,12 @@ def to36M(bones, body_parts):
                     ) / 4
                 )
             elif name == 'Thorax':
-                adjusted_bones.append(
-                    (
-                            + bones[body_parts['RShoulder']] + bones[body_parts['LShoulder']]
-                    ) / 2
-                )
+                adjusted_bones.append(bones[body_parts['Neck']])
             elif name == 'Head':
-                thorax = (
-                                 + bones[body_parts['RShoulder']] + bones[body_parts['LShoulder']]
-                         ) / 2
+                neck = bones[body_parts['Neck']]
                 adjusted_bones.append(
-                    thorax + (
-                            bones[body_parts['Nose']] - thorax
+                    neck + (
+                            bones[body_parts['Nose']] - neck
                     ) * 2
                 )
             elif name == 'Neck/Nose':
