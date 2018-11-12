@@ -7,6 +7,7 @@ import sys
 import os
 
 import evaluation_util
+from OpenGL import Skeleton
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import projection_gan
@@ -174,6 +175,9 @@ def main(args):
         img = evaluation_util.create_projection_img(pose, np.pi * d / 180.)
         cv.imwrite(os.path.join(out_directory, "rot_{:03d}_degree.png".format(d)), img)
 
+    if args.opengl:
+        skeleton = Skeleton(np.reshape(pose, (-1, 3)))
+        skeleton.run()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -191,5 +195,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--activate_func', type=str, default='leaky_relu')
     parser.add_argument('--use_bn', action="store_true")
+
+    parser.add_argument('--opengl', action="store_true")
     args = parser.parse_args()
     main(args)
