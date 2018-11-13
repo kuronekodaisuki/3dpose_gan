@@ -166,18 +166,20 @@ def main(args):
     points_norm = projection_gan.pose.dataset.pose_dataset.pose_dataset_base.Normalization.normalize_2d(points)
     pose = create_pose(model, points_norm)
 
-    out_directory = "demo_out"
-    os.makedirs(out_directory, exist_ok=True)
-    out_img = evaluation_util.create_img(points[0], frame)
-    cv.imwrite(os.path.join(out_directory, 'openpose_detect.jpg'), out_img)
-    deg = 15
-    for d in range(0, 360 + deg, deg):
-        img = evaluation_util.create_projection_img(pose, np.pi * d / 180.)
-        cv.imwrite(os.path.join(out_directory, "rot_{:03d}_degree.png".format(d)), img)
-
     if args.opengl:
         skeleton = Skeleton(np.reshape(pose, (-1, 3)))
         skeleton.run()
+    else:
+        out_directory = "demo_out"
+        os.makedirs(out_directory, exist_ok=True)
+        out_img = evaluation_util.create_img(points[0], frame)
+        cv.imwrite(os.path.join(out_directory, 'openpose_detect.jpg'), out_img)
+        deg = 15
+        for d in range(0, 360 + deg, deg):
+            img = evaluation_util.create_projection_img(pose, np.pi * d / 180.)
+            cv.imwrite(os.path.join(out_directory, "rot_{:03d}_degree.png".format(d)), img)
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
