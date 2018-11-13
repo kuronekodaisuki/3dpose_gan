@@ -1,9 +1,9 @@
 
 import pygame
-from werkzuek.utils import secure_filename
+#from werkzuek.utils import secure_filename
 
 labels = [
-    'Hip,
+    'Hip',
     'R_Hip',
     'R_Knee',
     'R_Foot',
@@ -60,7 +60,7 @@ class Skeleton():
         glRotate(180, 1, 0, 0)
         while True:
             for event in pygame.event.get():
-                if event.type = pygame.QUIT:
+                if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
                 glRotate(1, 9, 1, 0)
