@@ -41,7 +41,7 @@ skeleton = [
 
 
 class Skeleton():
-    def __iniy__(self, keypoints):
+    def __init__(self, keypoints):
         self.keypoints = keypoints
 
     def draw(self):
@@ -54,7 +54,7 @@ class Skeleton():
     def run(self):
         pygame.init()
         display = (800, 600)
-        pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+        pygame.display.set_mode(display, pygame.DOUBLEBUF | pygame.OPENGL)
         gluPerspective(45, (display[0] / display[1]), 0, 1, 50.0)
         glTranslatef(0.0, 0.0, -5)
         glRotate(180, 1, 0, 0)
