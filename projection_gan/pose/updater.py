@@ -9,19 +9,39 @@ import chainer.functions as F
 from chainer import Variable
 
 import numpy as np
+import cupy as cp
 
+BONES = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [0, 4],
+    [4, 5],
+    [5, 6],
+    [0, 7],
+    [7, 8],
+    [8, 9],
+    [9, 10],
+    [9, 11],
+    [11, 12],
+    [12, 13],
+    [9, 14],
+    [14, 15],
+    [15, 16]
+]
 
 class H36M_Updater(chainer.training.StandardUpdater):
 
     def __init__(self, gan_accuracy_cap, use_heuristic_loss,
                  heuristic_loss_weight, mode, *args, **kwargs):
-        if not mode in ['supervised', 'unsupervised']:
+        if not mode in ['supervised', 'unsupervised', 'weaky_supervised']:
             raise ValueError("only 'supervised' and 'unsupervised' are valid "
                              "for 'mode', but '{}' is given.".format(mode))
         self.gan_accuracy_cap = gan_accuracy_cap
         self.use_heuristic_loss = use_heuristic_loss
         self.heuristic_loss_weight = heuristic_loss_weight
         self.mode = mode
+        #self.use_bone_length
         super(H36M_Updater, self).__init__(*args, **kwargs)
 
     @staticmethod
@@ -77,6 +97,72 @@ class H36M_Updater(chainer.training.StandardUpdater):
             # 2D Projection.
             x = xy_real[:, 0::2]
             y = xy_real[:, 1::2]
+            new_x = x * cos_theta - z_pred * sin_theta
+            xy_fake = F.concat((new_x[:, :, None], y[:, :, None]), axis=2)
+            xy_fake = F.reshape(xy_fake, (batchsize, -1))
+
+            y_real = dis(xy_real)
+            y_fake = dis(xy_fake)
+
+            acc_dis_fake = F.binary_accuracy(
+                y_fake, dis.xp.zeros(y_fake.data.shape, dtype=int))
+            acc_dis_real = F.binary_accuracy(
+                y_real, dis.xp.ones(y_real.data.shape, dtype=int))
+            acc_dis = (acc_dis_fake + acc_dis_real) / 2
+
+            loss_gen = F.sum(F.softplus(-y_fake)) / batchsize
+            if self.use_heuristic_loss:
+                loss_heuristic = self.calculate_heuristic_loss(
+                    xy_real=xy_real, z_pred=z_pred)
+                loss_gen += loss_heuristic * self.heuristic_loss_weight
+                chainer.report({'loss_heuristic': loss_heuristic}, gen)
+            gen.cleargrads()
+            if acc_dis.data >= (1 - self.gan_accuracy_cap):
+                loss_gen.backward()
+                gen_optimizer.update()
+            xy_fake.unchain_backward()
+
+            loss_dis = F.sum(F.softplus(-y_real)) / batchsize
+            loss_dis += F.sum(F.softplus(y_fake)) / batchsize
+            
+            #if self.use_bone_length:
+            # fake
+            fake = []
+            X = xy_proj[:, 0::2]
+            Y = xy_proj[:, 1::2]
+            Z = z_pred.data
+            for bone in BONES:
+                XYZ = []
+                for zipped in zip(X[:, bone[0]] - X[:, bone[1]], Y[:, bone[0]] - Y[:, bone[1]], Z[:, bone[0]] - Z[:, bone[1]]):
+                    XYZ.append(zipped)
+                fake.append(cp.linalg.norm(cp.array(XYZ, dtype=cp.float32)))
+            # real
+            real = []
+            for bone in BONES:
+                XYZ = (xyz[:, bone[0]] - xyz[:, bone[1]])
+                real.append(cp.linalg.norm(cp.array(XYZ, dtype=cp.float32)))
+            loss_bone = F.sum(cp.array(fake, dtype=cp.float32) - cp.array(real, dtype=cp.float32)) / batchsize
+            loss_dis += loss_bone
+
+            dis.cleargrads()
+            if acc_dis.data <= self.gan_accuracy_cap:
+                loss_dis.backward()
+                dis_optimizer.update()
+
+            chainer.report({'loss': loss_gen, 'z_mse': z_mse}, gen)
+            chainer.report({'loss_bone': loss_bone,
+                'loss': loss_dis, 'acc': acc_dis, 'acc/fake': acc_dis_fake,
+                'acc/real': acc_dis_real}, dis)
+
+        else: # weaky_siupervised
+            # Random rotation.
+            theta = gen.xp.random.uniform(0, 2 * np.pi, batchsize).astype('f')
+            cos_theta = gen.xp.cos(theta)[:, None]
+            sin_theta = gen.xp.sin(theta)[:, None]
+
+            # 2D Projection.
+            x = xy_real[:, 0::2]
+            y = xy_real[:, 1::2]
             new_x = x * cos_theta + z_pred * sin_theta
             xy_fake = F.concat((new_x[:, :, None], y[:, :, None]), axis=2)
             xy_fake = F.reshape(xy_fake, (batchsize, -1))
@@ -104,6 +190,25 @@ class H36M_Updater(chainer.training.StandardUpdater):
 
             loss_dis = F.sum(F.softplus(-y_real)) / batchsize
             loss_dis += F.sum(F.softplus(y_fake)) / batchsize
+
+            # fake
+            fake = []
+            X = xy_proj[:, 0::2]
+            Y = xy_proj[:, 1::2]
+            Z = z_pred.data
+            for bone in BONES:
+                XYZ = []
+                for zipped in zip(X[:, bone[0]] - X[:, bone[1]], Y[:, bone[0]] - Y[:, bone[1]], Z[:, bone[0]] - Z[:, bone[1]]):
+                    XYZ.append(zipped)
+                fake.append(cp.linalg.norm(cp.array(XYZ, dtype=cp.float32)))
+            # real
+            real = []
+            for bone in BONES:
+                XYZ = (xyz[:, bone[0]] - xyz[:, bone[1]])
+                real.append(cp.linalg.norm(cp.array(XYZ, dtype=cp.float32)))
+            loss_bone = F.sum(cp.array(fake, dtype=cp.float32) - cp.array(real, dtype=cp.float32)) / batchsize
+            loss_dis += loss_bone
+
             dis.cleargrads()
             if acc_dis.data <= self.gan_accuracy_cap:
                 loss_dis.backward()
@@ -111,5 +216,5 @@ class H36M_Updater(chainer.training.StandardUpdater):
 
             chainer.report({'loss': loss_gen, 'z_mse': z_mse}, gen)
             chainer.report({
-                'loss': loss_dis, 'acc': acc_dis, 'acc/fake': acc_dis_fake,
+                'loss': loss_dis, 'loss_bone': loss_bone, 'acc': acc_dis, 'acc/fake': acc_dis_fake,
                 'acc/real': acc_dis_real}, dis)

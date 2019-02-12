@@ -46,12 +46,12 @@ def main():
     parser.add_argument('-o', '--out', type=str, default='')
     parser.add_argument('-e', '--epoch', type=int, default=20)
     parser.add_argument('-m', '--mode', type=str, default='unsupervised',
-                        choices=['supervised', 'unsupervised'])
+                        choices=['supervised', 'unsupervised', 'weaky_supervised'])
     parser.add_argument('-d', '--dataset', type=str, default='h36m',
                         choices=['h36m', 'mpii', 'mpi_inf'])
     parser.add_argument('-a', '--activate_func',
                         type=str, default='leaky_relu')
-    parser.add_argument('-c', '--gan_accuracy_cap', type=float, default=0.9,
+    parser.add_argument('-c', '--gan_accuracy_cap', type=float, default=0.98,
                         help="Disのaccuracyがこれを超えると更新しない手加減")
     parser.add_argument('-A', '--action', type=str, default='all')
     parser.add_argument('-s', '--snapshot_interval', type=int, default=1)
@@ -60,6 +60,7 @@ def main():
     parser.add_argument('--use_heuristic_loss', action="store_true")
     parser.add_argument('--use_sh_detection', action="store_true")
     parser.add_argument('--use_bn', action="store_true")
+    parser.add_argument('--use_bone_length', action="store_true")
     args = parser.parse_args()
     args.out = create_result_dir(args.out)
 
@@ -79,14 +80,14 @@ def main():
         dis.to_gpu()
 
     # Setup an optimizer
-    def make_optimizer(model):
-        optimizer = chainer.optimizers.Adam(alpha=3e-4, beta1=0.5)
+    def make_optimizer(model, args):
+        optimizer = chainer.optimizers.Adam(alpha=0.0003, beta1=0.5)
         optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(0.000002))
+        optimizer.add_hook(chainer.optimizer.WeightDecay(0.000005))
         return optimizer
 
-    opt_gen = make_optimizer(gen)
-    opt_dis = make_optimizer(dis)
+    opt_gen = make_optimizer(gen, args)
+    opt_dis = make_optimizer(dis, args)
 
     # Load dataset.
     if args.dataset == 'h36m':
@@ -127,7 +128,7 @@ def main():
         gen, 'gen_epoch_{.updater.epoch}.npz'), trigger=snapshot_interval)
     trainer.extend(extensions.LogReport(trigger=log_interval))
     trainer.extend(extensions.PrintReport([
-        'epoch', 'iteration', 'gen/z_mse', 'gen/loss', 'gen/loss_heuristic',
+        'epoch', 'iteration', 'gen/z_mse', 'gen/loss', 'dis/loss_bone',
         'dis/loss', 'dis/acc', 'dis/acc/real', 'dis/acc/fake',
         'validation/gen/z_mse', 'validation/gen/euclidean_distance'
     ]), trigger=log_interval)

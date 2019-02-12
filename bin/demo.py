@@ -5,6 +5,7 @@ import argparse
 
 import sys
 import os
+import matplotlib.pyplot as plt
 
 import evaluation_util
 from OpenGL import Skeleton
@@ -119,16 +120,21 @@ class OpenPose(object):
         BODY_PARTS, POSE_PAIRS = parts(args)
 
         points = []
-        for i in range(len(BODY_PARTS)):
+        for i, part in enumerate(BODY_PARTS):
             # Slice heatmap of corresponging body's part.
             heatMap = out[0, i, :, :]
-
             # Originally, we try to find all the local maximums. To simplify a sample
             # we just find a global one. However only a single pose at the same time
             # could be detected this way.
             _, conf, _, point = cv.minMaxLoc(heatMap)
             x = (frameWidth * point[0]) / out.shape[3]
             y = (frameHeight * point[1]) / out.shape[2]
+
+            print(part, point, conf)
+            #plt.imshow(heatMap, cmap='hot', interpolation='nearest')
+            #plt.title(part)
+            #plt.show()
+            #plt.savefig(part + '.png')
 
             # Add a point if it's confidence is higher than threshold.
             points.append((x, y) if conf > args.thr else None)
@@ -192,7 +198,7 @@ if __name__ == '__main__':
     parser.add_argument('--inf_engine', action='store_true',
                         help='Enable Intel Inference Engine computational backend. '
                              'Check that plugins folder is in LD_LIBRARY_PATH environment variable')
-    parser.add_argument('--lift_model', type=str, required=True)
+    parser.add_argument('--lift_model', type=str, default='results/gen_epoch_1000.npz')
     parser.add_argument('--dataset', type=str, default="COCO")
 
     parser.add_argument('--activate_func', type=str, default='leaky_relu')
